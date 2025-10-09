@@ -1,3 +1,5 @@
+Alunos: João Gois de Otoni, Marcus Vinicius Azevedo Moreira
+
 📊 Pipeline de Dados da B3 com Azure
 Este projeto é um estudo prático sobre a construção de um pipeline de dados na nuvem Azure. O objetivo é automatizar a extração, transformação e carga (ETL) dos arquivos diários de cotações da B3 em um banco de dados SQL para futuras análises.
 
