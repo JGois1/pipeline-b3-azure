@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>B3 Analytics | Consulta de Ativos</title>
+    <!-- Carrega Tailwind CSS para estilização fácil e responsiva -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Define a fonte Inter como padrão */
+        body { font-family: 'Inter', sans-serif; background-color: #f7fafc; }
+        /* Estiliza o cabeçalho fixo da tabela para rolar com o corpo */
+        .table-fixed-header thead th {
+            position: sticky;
+            top: 0;
+            background-color: #1a202c; /* Cor do cabeçalho */
+            color: white;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+    <div class="container mx-auto p-4 sm:p-8">
+        <!-- Título Principal -->
+        <header class="text-center mb-8 bg-white p-6 rounded-xl shadow-lg">
+            <h1 class="text-4xl font-extrabold text-blue-600 mb-2">📊 Consulta de Cotações B3</h1>
+            <p class="text-gray-600">Dados consumidos do Azure SQL Database via Backend (Flask/Python).</p>
+        </header>
+
+        <!-- Seção de Status e Mensagens -->
+        <div id="status-message" class="text-center p-4 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded-lg hidden mb-6" role="alert">
+            Carregando dados...
+        </div>
+
+        <!-- Container da Tabela (Scrollable) -->
+        <div class="bg-white rounded-xl shadow-xl overflow-hidden">
+            <div class="overflow-x-auto max-h-[70vh] table-fixed-header">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-800">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider rounded-tl-xl">Ativo</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Data</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Fechamento</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider rounded-tr-xl">Volume</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ativos-table-body" class="bg-white divide-y divide-gray-200">
+                        <!-- Dados serão inseridos aqui pelo JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <footer class="text-center mt-8 text-gray-500 text-sm">
+            Verifique o terminal para garantir que o Backend Flask esteja rodando na porta 5000.
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const statusMessage = document.getElementById('status-message');
+            const tableBody = document.getElementById('ativos-table-body');
+            
+            // Endereço da API Backend (Flask, rodando localmente na porta 5000)
+            const API_URL = 'http://127.0.0.1:5000/api/ativos';
+
+            statusMessage.classList.remove('hidden');
+
+            // Função para formatar a data (opcional, mas melhora a visualização)
+            const formatDate = (dateString) => {
+                try {
+                    // O SQL Server devolve a data como 'YYYY-MM-DD 00:00:00'
+                    // Precisamos garantir que seja um formato válido para a substring
+                    if (typeof dateString !== 'string') return dateString;
+
+                    const datePart = dateString.split(' ')[0]; 
+                    const [year, month, day] = datePart.split('-');
+                    return `${day}/${month}/${year}`;
+                } catch (e) {
+                    return dateString;
+                }
+            };
+
+            // Função principal para carregar os dados
+            const loadData = async () => {
+                try {
+                    const response = await fetch(API_URL);
+                    
+                    if (!response.ok) {
+                        throw new Error(`Erro HTTP: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (data.length === 0) {
+                        statusMessage.className = 'text-center p-4 bg-blue-100 border border-blue-400 text-blue-700 rounded-lg mb-6';
+                        statusMessage.textContent = 'Nenhuma cotação encontrada no banco de dados. Tente inserir dados manualmente no Azure SQL.';
+                        return;
+                    }
+
+                    // Limpa a tabela antes de inserir
+                    tableBody.innerHTML = ''; 
+
+                    // Insere as linhas na tabela
+                    data.forEach(item => {
+                        const row = tableBody.insertRow();
+                        
+                        // Ativo
+                        let cell = row.insertCell();
+                        cell.textContent = item.Ativo;
+                        cell.className = "px-6 py-4 whitespace-nowrap font-bold text-gray-900";
+
+                        // Data
+                        cell = row.insertCell();
+                        cell.textContent = formatDate(item.DataPregao);
+                        cell.className = "px-6 py-4 whitespace-nowrap text-sm text-gray-500";
+                        
+                        // Fechamento
+                        cell = row.insertCell();
+                        cell.textContent = `R$ ${parseFloat(item.Fechamento).toFixed(2).replace('.', ',')}`;
+                        cell.className = "px-6 py-4 whitespace-nowrap text-sm text-green-600 font-semibold";
+
+                        // Volume
+                        cell = row.insertCell();
+                        cell.textContent = parseInt(item.Volume).toLocaleString('pt-BR');
+                        cell.className = "px-6 py-4 whitespace-nowrap text-sm text-gray-500";
+                    });
+
+                    statusMessage.classList.add('hidden'); // Esconde a mensagem de status em caso de sucesso
+
+                } catch (error) {
+                    console.error('Erro ao buscar dados:', error);
+                    statusMessage.className = 'text-center p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg mb-6';
+                    statusMessage.textContent = `Erro ao conectar com o Backend. Detalhes: ${error.message}. Verifique o servidor Flask.`;
+                }
+            };
+
+            loadData();
+        });
+    </script>
+</body>
+</html>
